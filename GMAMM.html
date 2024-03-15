@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Give Me a Metric Minute</title>
+    <style>
+html, body {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(to right, #000000, #210939);
+    color: #ffffff;
+}
+
+.clocks-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 90%;
+    max-width: 700px;
+}
+
+.clock {
+    background-color: rgba(26, 30, 34, 0.9);
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    padding: 25px 50px;
+    text-align: center;
+    margin: 25px 0;
+    width: 100%;
+    transition: transform 1s ease, margin 1s ease;
+}
+
+.clock:hover {
+    transform: scale(1.03);
+}
+
+.clock h2 {
+    margin: 0 0 15px;
+    font-size: 26px;
+    color: #9abac1;
+}
+
+.clock p {
+    margin: 0;
+    font-size: 56px;
+    color: #ffffff;
+}
+
+.small-text {
+    font-size: 18px;
+}
+
+.collapsible {
+    background-color: #39424e;
+    color: white;
+    cursor: pointer;
+    padding: 20px;
+    width: 85%;
+    max-width: 650px;
+    border: none;
+    text-align: center;
+    outline: none;
+    font-size: 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    margin-bottom: 25px;
+    transition: background-color 0.5s ease;
+}
+
+.collapsible:hover {
+    background-color: #2e353d;
+}
+
+.content {
+    padding: 0 20px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-in-out;
+    background-color: #45484c;
+    color: #ffffff;
+    border-radius: 10px;
+}
+
+#sunriseStandard,
+#sunsetStandard,
+#sunriseMetric,
+#sunsetMetric {
+    font-size: 24px;
+}
+
+.dark-mode {
+    background: linear-gradient(to right, #1a1a1a, #333333);
+    color: #dddddd;
+}
+.dark-mode .clock {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+.dark-mode .collapsible {
+    background-color: #555;
+    color: #fff;
+}
+.dark-mode .content {
+    background-color: #666;
+    color: #fff;
+}
+    </style>
+    <script>
+        function updateTimes() {
+            const now = new Date();
+
+            const standardHours = now.getHours();
+            const standardMinutes = now.getMinutes();
+            const standardSeconds = now.getSeconds();
+            document.getElementById('standardTime').textContent =
+                `${standardHours.toString().padStart(2, '0')}:${standardMinutes.toString().padStart(2, '0')}:${standardSeconds.toString().padStart(2, '0')}`;
+
+            const totalStandardHours = standardHours + standardMinutes / 60 + standardSeconds / 3600;
+            const totalMetricHours = totalStandardHours / 2.4;
+            const metricHours = Math.floor(totalMetricHours);
+            const metricMinutes = Math.floor((totalMetricHours - metricHours) * 100);
+            const metricSeconds = Math.round(((totalMetricHours - metricHours) * 100 - metricMinutes) * 100);
+
+            document.getElementById('metricTime').textContent =
+                `${metricHours.toString().padStart(2, '0')}:${metricMinutes.toString().padStart(2, '0')}:${metricSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function toggleContent() {
+            var content = this.nextElementSibling;
+            var clocks = document.getElementsByClassName("clock");
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                for (var i = 0; i < clocks.length; i++) {
+                    clocks[i].style.transform = "scale(1)";
+                    clocks[i].style.margin = "25px 0";
+                }
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+                for (var i = 0; i < clocks.length; i++) {
+                    clocks[i].style.transform = "scale(0.75)";
+                    clocks[i].style.margin = "-15px 0";
+                }
+            }
+        }
+
+        let latitude, longitude;
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    latitude = position.coords.latitude;
+                    longitude = position.coords.longitude;
+                    document.getElementById('location').innerHTML = "Latitude: " + latitude + "<br>Longitude: " + longitude;
+                    fetchSunriseSunset(latitude, longitude);
+                }, showError);
+            } else { 
+                document.getElementById('location').innerHTML = "Geolocation is not supported by this browser.";
+            }
+        }
+
+        function showError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    document.getElementById('location').innerHTML = "User denied the request for Geolocation.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    document.getElementById('location').innerHTML = "Location information is unavailable.";
+                    break;
+                case error.TIMEOUT:
+                    document.getElementById('location').innerHTML = "The request to get user location timed out.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    document.getElementById('location').innerHTML = "An unknown error occurred.";
+                    break;
+            }
+        }
+
+        function convertToMetricTime(standardTime) {
+            const [hours, minutes, seconds = 0] = standardTime.split(':').map(num => parseInt(num, 10));
+            const totalStandardSeconds = hours * 3600 + minutes * 60 + seconds;
+            const totalMetricSeconds = totalStandardSeconds / (24 * 60 * 60) * (10 * 100 * 100);
+            const metricHours = Math.floor(totalMetricSeconds / (100 * 100));
+            const metricMinutes = Math.floor((totalMetricSeconds % (100 * 100)) / 100);
+            const metricSeconds = Math.floor(totalMetricSeconds % 100);
+            return `${metricHours.toString().padStart(2, '0')}:${metricMinutes.toString().padStart(2, '0')}:${metricSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function fetchSunriseSunset(lat, lng) {
+            const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const sunrise = new Date(data.results.sunrise);
+                    const sunset = new Date(data
+
+.results.sunset);
+
+                    const sunriseOptions = { hour12: false, hour: '2-digit', minute: '2-digit' };
+                    const sunsetOptions = { hour12: false, hour: '2-digit', minute: '2-digit' };
+
+                    const sunriseStandardTime = sunrise.toLocaleTimeString('en-US', sunriseOptions);
+                    const sunsetStandardTime = sunset.toLocaleTimeString('en-US', sunsetOptions);
+
+                    document.getElementById('sunriseStandard').textContent = `Sunrise: ${sunriseStandardTime}`;
+                    document.getElementById('sunsetStandard').textContent = `Sunset: ${sunsetStandardTime}`;
+
+                    const sunriseMetricTime = convertToMetricTime(sunriseStandardTime).slice(0, -3);
+                    const sunsetMetricTime = convertToMetricTime(sunsetStandardTime).slice(0, -3);
+
+                    document.getElementById('sunriseMetric').textContent = `Sunrise: ${sunriseMetricTime}`;
+                    document.getElementById('sunsetMetric').textContent = `Sunset: ${sunsetMetricTime}`;
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        window.onload = function() {
+            updateTimes();
+            var coll = document.getElementsByClassName("collapsible")[0];
+            coll.addEventListener("click", toggleContent);
+            getLocation();
+        };
+
+        setInterval(updateTimes, 1000);
+    </script>
+</head>
+<body>
+    <div class="clocks-container">
+        <div class="clock">
+            <h2>Standard Time</h2>
+            <p id="standardTime">00:00:00</p>
+            <p id="sunriseStandard" > Sunrise: ...</p>
+            <p id="sunsetStandard" > Sunset: ...</p>
+        </div>
+        <div class="clock">
+            <h2>Metric Time</h2>
+            <p id="metricTime">00:00:00</p>
+            <p id="sunriseMetric" > Sunrise: ...</p>
+            <p id="sunsetMetric" > Sunset: ...</p>
+        </div>
+        <div class="clock" id="location" style="display: none;">
+            <h2>Your Location</h2>
+            <p>Fetching...</p>
+        </div>        
+    </div>
+    <button class="collapsible">Learn about Metric Time</button>
+    <div class="content">
+        <p>Base 10 time, also known as metric time or decimal time, consists of 10 hours per day, 100 minutes per hour, and 100 seconds per minute. This means that over the course of one metric hour, 2.4 hours of standard time have passed.
+        <p>The concept of decimal time has been proposed by various individuals throughout history, but its most notable advocate was the French Revolutionary government. In 1793, during the French Revolution, the French National Convention commissioned a committee to create a new decimal-based system of measurement, which included time. This committee, known as the Commission of Weights and Measures, proposed a decimal time system as part of the larger decimal metric system.</p>
+    </div>
+</body>
+</html>
